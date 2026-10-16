@@ -1,43 +1,26 @@
 # 上线清单
 
-本仓（`gx-datav`）已经建好、提交在本地 `main`，但**还没推到 GitHub** ——
-当前沙箱里的 GitHub 凭据已失效（HTTPS 要用户名、SSH 无 key），我代推不了。
-所有权相关的动作也需要你来做。
+`gx-datav` 已上线。本文记录**现状**、**还差你做的事**，以及首轮上线时
+实测踩到的坑（都是文档里查不到、撞上才知道的）。
 
-下面是从零到线上的完整步骤，按顺序做一遍即可。
+## 现状
 
-## 1. 建仓并推送
+| 环节 | 状态 | 备注 |
+|---|---|---|
+| GitHub 仓库 | ✅ 已建 | https://github.com/14752222/gox-datav（默认分支 `master`） |
+| 代码推送 | ✅ 已推 | 3 个提交，96 个文件 |
+| 展示站 | ✅ 已部署 | https://14752222.github.io/gox-datav/ |
+| npm 包 | ✅ 0.1.0 已发布 | https://www.npmjs.com/package/gx-datav（发布者 `goxjs`） |
+| registry 真装验证 | ✅ 已过 | `gox install gx-datav` → 29 组件全部可 import，渲染无异常 |
+| CI | ✅ 绿 | 站点自检 + 同步闸门（35 文件一致）+ 真渲染冒烟 |
+| Trusted Publisher | ⬜ 待配 | 见下，配好之后发版全自动 |
 
-```bash
-cd /path/to/gox-datav
-git remote add origin git@github.com:14752222/gox-datav.git   # 或 https://...
-git push -u origin main
-```
+## 还差你做的两件事
 
-## 2. 打开 Pages
+### 1. 配 npm Trusted Publisher（一次性的）
 
-仓库 → **Settings → Pages → Build and deployment → Source** 选
-**GitHub Actions**（不选这个，`pages.yml` 会一直失败）。
-
-推完 `main` 后 `pages.yml` 会自动跑，站点上线在
-**https://14752222.github.io/gox-datav/**
-
-> 顺手确认一下 README 顶部与 `package.json` 里写的 `homepage` 是这个地址，
-> 对不上就改掉 —— 文档里的链接是给用户点的，错了就是死链。
-
-## 3. 发布到 npm
-
-**第一次必须手动发**：npm 的 Trusted Publishing 配置项要挂在**已存在的包**
-上，包还不存在时没法配。
-
-```bash
-cd /path/to/gox-datav
-npm login                # 用 14752222 这个账号
-npm publish --access public
-```
-
-发完去 npmjs.com 上该包的 **Settings → Trusted Publisher** 填四个字段，
-必须逐字符相等（失配的症状是**误导性的 404**，不是 403）：
+npmjs.com → 包 **Settings → Publishing access → Add trusted publisher**，
+四个字段必须**逐字符相等**（失配的症状是**误导性的 404**，不是 403）：
 
 | 字段 | 值 |
 |---|---|
@@ -46,45 +29,116 @@ npm publish --access public
 | Workflow filename | `release.yml` |
 | Environment name | （留空） |
 
-配好之后，后续发版全自动：改 `package.json` 的 `version` → 推 `main` →
-打标签 `v0.1.1` 推上去（或建 Release），`release.yml` 会判重后发布，
-并附 npm provenance 证明。
+配好之后发版流程：改 `package.json` 的 `version` → 推 `master` → 打标签
+`v0.1.1` 推上去（或建 Release），`release.yml` 走 OIDC 自动发布并附
+provenance，**不需要任何 token**。
 
 > ⚠️ 别在 workflow 里加 `NODE_AUTH_TOKEN` / `registry-url` ——
 > `.npmrc` 里的 token 会压过 OIDC 自动检测，最后仍然是那个 404。
 
-## 4. 发布前的本地检查（建议每次都跑）
+建议配完打一个 `v0.1.1` 试一次，确认 OIDC 链路通了再正式用。
 
-```bash
-python3 scripts/check-sync.py      # 与主仓 testdata/datav/ 一致
-python3 scripts/gen-site-data.py   # 重新生成站点数据
-python3 scripts/check-site.py      # 站点完整性
-xvfb-run -a ./scripts/smoke.sh     # 装进临时工程真跑一遍（有显示服务器可去掉 xvfb-run）
+### 2. revoke 所有临时 token
+
+- npm：`gox-all`（bypass_2fa=false，已无用）、`ai1`（只用于首次发布）
+  → https://www.npmjs.com/settings/goxjs/tokens
+- GitHub：两个 fine-grained PAT → https://github.com/settings/personal-access-tokens
+
+OIDC 生效后这两边的 token 都不再需要。
+
+## 首轮实测踩到的坑
+
+都撞过一遍，记下来免得下次重新踩。
+
+### npm：token 必须是 Automation 类型
+
+不是权限问题，是 token 类型。第一个 token 权限是 `package:write`，
+照样被 2FA 拦下：
+
+```
+npm error code EOTP
+npm error This operation requires a one-time password.
 ```
 
-## 5. 还差一件事：纯 JS 包在 Gox 里的 import 验证
+查 token 元数据才看出区别（`bypass_2fa`）：
 
-`smoke.sh` 用的是本地 `gox` 二进制 + 本地 `node_modules` 布局，证明了包的
-**结构**没问题。但还有一条真实的用户路径没走通：**从 registry 真的
-`gox install gx-datav` 装下来能不能 import**。
+```bash
+curl -sH "Authorization: Bearer $TOKEN" https://registry.npmjs.org/-/npm/v1/tokens
+# { "name": "gox-all", "permissions": [...], "bypass_2fa": false }   ← 被拦
+# { "name": "ai1",     "permissions": [...], "bypass_2fa": true  }   ← 通过
+```
 
-这条我没法在沙箱里验证（要发到 registry 之后才能测，而发布需要你的凭据）。
-发布第一版后，请在本地验一下：
+**Automation 类型 = `bypass_2fa: true`**，这是它存在的唯一理由。
+账号开了 2FA 时，Publish 类型的 token 会在发布那一步要 OTP，无人值守环境填不了。
+
+### npm：新包有 staged publishing
+
+首次发布完 `npm publish` 回显 `+ gx-datav@0.1.0` 看着成功了，但 registry
+上立刻查是个占位版本：
+
+```json
+{ "dist-tags": { "latest": "0.0.0-stage" },
+  "description": "Temporary package placeholder for staged publishing" }
+```
+
+**约 2 分钟后**审核通过，`0.1.0` 才成为 `latest`。这期间装包会拿到空壳。
+判断依据：轮询 `dist-tags.latest` 是否变成真版本号，别只看 publish 的回显。
+
+### npm：发布要显式指定官方源
+
+沙箱默认 `registry=https://mirrors.tencent.com/npm/`（只读镜像），直接
+`npm publish` 发不出去。发布时加 `--registry=https://registry.npmjs.org`。
+
+### GitHub：fine-grained token 要勾两项
+
+`Contents: Read and write` + `Workflows: Read and write`。只有建仓权限的话，
+症状是认证通过但推送 403：
+
+```
+remote: Permission to 14752222/Gox.git denied to 14752222.   ← 认证过了，权限不够
+```
+
+缺 Workflows 权限时，推 `.github/workflows/*.yml` 会被单独拒绝。
+
+### GitHub：git 协议可能超时，退路是 Git Data API
+
+沙箱到 `github.com:443` 会间歇性超时，但 `api.github.com` 通常可达。
+单文件改动可以走 blob → tree → commit → PATCH ref 四步；元数据（作者、
+邮箱、时间）照抄的话，重建出的 commit sha 与本地**完全一致**。
+
+### CI：`go build` 路径写错 = 冒烟静默跳过
+
+```yaml
+( cd .gox-build && go build -o gox . )        # 错：根目录没有 .go 文件
+( cd .gox-build && go build -o gox ./cmd/gox ) # 对
+```
+
+写错的后果比报错严重：构建步骤挂了 `continue-on-error` 不红 → 冒烟被
+`if: steps.gox.outputs.ok == '1'` 门控于是不跑 → **CI 全绿但从没真跑过**。
+现在两种失败都打 `::error::`，在 Actions 界面能看见红标。
+
+## 发布前的本地检查（每次都跑）
+
+```bash
+python3 scripts/check-sync.py      # 与主仓 testdata/datav/ 一致（35 文件）
+python3 scripts/gen-site-data.py   # 重新生成站点数据
+python3 scripts/check-site.py      # 站点完整性
+xvfb-run -a ./scripts/smoke.sh     # 装进临时工程真跑一遍
+```
+
+## registry 真装验证（已过，留档）
 
 ```bash
 mkdir /tmp/t && cd /tmp/t
-npm init -y
-npm i -g @goxjs/goxjs         # 若尚未安装 Gox 运行时
-gox install gx-datav
-cat > app.js <<'EOF'
-import { BorderBox, TitleBar, RingProgress, palette } from "gx-datav";
-console.log("组件库已加载，palette.bg =", palette.bg);
-EOF
-gox app.js
+gox install gx-datav          # 装到 0.1.0，38 个文件
 ```
 
-预期输出 `组件库已加载，palette.bg = #070d1f`。
+`app.js` 里 `import { components } from "gx-datav"` 后渲染，实测输出：
 
-如果这里报"找不到模块 `gx-datav`"，多半是 `exports` 条件与 Gox 解析器
-不匹配（Gox 只认 `import` / `default` 两个条件，不认 `require` /
-`browser` / `node` / `types`），回来核对 `package.json` 的 `exports`。
+```
+REGISTRY SMOKE OK —— 29 个组件从 npm 装下来后全部可 import，窗口渲染无异常
+```
+
+这条路径和 `smoke.sh` 不重复：后者是拷贝发布内容进 `node_modules`（绕过
+registry），前者走真实下载。包结构对不对靠前者，registry 元数据对不对
+靠后者 —— 两个都过才算完。
