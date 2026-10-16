@@ -1,0 +1,57 @@
+{
+  "name": "gx-datav",
+  "version": "0.1.0",
+  "description": "Gox 数据大屏组件库 —— 29 个 canvas 自绘图表/信息组件，零第三方依赖。运行需要 Gox 运行时（不是 Node/浏览器包）。",
+  "type": "module",
+  "license": "MIT",
+  "author": "14752222 (Gox)",
+  "homepage": "https://github.com/14752222/gox-datav",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/14752222/gox-datav.git"
+  },
+  "bugs": {
+    "url": "https://github.com/14752222/gox-datav/issues"
+  },
+  "keywords": [
+    "gox",
+    "datav",
+    "dashboard",
+    "chart",
+    "canvas",
+    "数据大屏",
+    "可视化"
+  ],
+  "exports": {
+    ".": {
+      "import": "./src/index.js",
+      "default": "./src/index.js"
+    },
+    "./theme": {
+      "import": "./src/theme.js",
+      "default": "./src/theme.js"
+    },
+    "./draw": {
+      "import": "./src/draw.js",
+      "default": "./src/draw.js"
+    },
+    "./motion": {
+      "import": "./src/motion.js",
+      "default": "./src/motion.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "examples",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "check:sync": "python3 scripts/check-sync.py",
+    "check:exports": "python3 scripts/check-exports.py"
+  },
+  "engines": {
+    "gox": ">=0.1.0"
+  }
+}

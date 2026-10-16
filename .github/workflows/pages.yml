@@ -1,0 +1,74 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# gx-datav 展示站发布：把 docs/ 原样部署到 GitHub Pages
+#   线上地址 https://14752222.github.io/gox-datav/
+#
+# 比 Gox 主仓的 pages.yml 简单得多 —— 那边要 pnpm install + vitepress build，
+# 这边是**零构建静态站**（HTML + CSS + JS，无打包器），
+# upload-pages-artifact 直接把 docs/ 打包上传即可。
+#
+# 为什么零构建：站点只是"29 张截图 + 一张 props 表"，规模不需要构建工具。
+#   引 VitePress 的代价是多一条依赖链、多一个构建步骤、多一类构建期才能
+#   发现的问题；而这里最大的风险是"图挂了"（已实测踩过一次 404），
+#   那种问题构建器同样抓不到，得靠浏览器实测（见 scripts/smoke.sh 的思路）。
+#
+# 一次性前置（仓库设置，代码改不了）：
+#   Settings → Pages → Build and deployment → Source 必须选 **GitHub Actions**。
+#
+# 截图（docs/shots/）随仓库提交，不在部署时生成：部署机没有 Gox 运行时、
+#   也跑不了离屏渲染（gfx 依赖系统字体与 GUI 栈）。它们是**资产**，
+#   重新生成的步骤见 scripts/README.md。
+# ─────────────────────────────────────────────────────────────────────────────
+name: pages
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "docs/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # 数据与截图必须齐 —— 部署一份"卡片全空"的站点比不部署更糟。
+      - name: 站点自检
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, sys
+          d = json.load(open("docs/components.json"))
+          n = len(d["components"])
+          if n != 29:
+              sys.exit("组件数 %d != 29" % n)
+          missing = [c["name"] for c in d["components"]
+                     if not os.path.isfile("docs/" + c["shot"])]
+          if missing:
+              sys.exit("缺截图: %s" % missing)
+          for f in ("docs/index.html", "docs/assets/style.css", "docs/assets/app.js"):
+              if not os.path.isfile(f):
+                  sys.exit("缺站点文件: %s" % f)
+          print("站点自检 OK：29 个组件，截图与站点文件齐全")
+          PY
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - id: deploy
+        uses: actions/deploy-pages@v4

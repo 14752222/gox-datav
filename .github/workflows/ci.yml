@@ -1,0 +1,79 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# gx-datav 常规闸门：push / PR 时校验源码同步、站点数据可生成、包能装上跑起来。
+#
+# 与 release.yml 分工：这边是"每次改动都过一遍"的低成本检查，那边是发版。
+# 发布前要跑的东西这里都跑 —— release.yml 里是复用的同一批脚本。
+# ─────────────────────────────────────────────────────────────────────────────
+name: ci
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      # ── 站点数据可生成 + 完整 ─────────────────────────────────────────
+      # gen-site-data.py 会解析 29 个组件的源码注释。它跑得通，等于顺带
+      # 验证了注释结构没被改坏（改坏了 props 表就会空，站点上就是一片
+      # 没有字段说明的卡片）。check-site.py 再核一遍图片路径与站点文件。
+      - name: 生成站点数据并自检
+        run: |
+          python3 scripts/gen-site-data.py
+          python3 scripts/check-site.py
+
+      # ── 同步闸门 ──────────────────────────────────────────────────────
+      # 取主仓的 testdata/datav/ 与本地 src/ 比对。取不到就 warning 跳过：
+      # 本仓的 CI 不该因为另一个仓库的可见性变化而红。
+      - name: 取 Gox 主仓的组件源码
+        id: core
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          repository: 14752222/Gox
+          path: .gox-core
+          sparse-checkout: testdata/datav
+          sparse-checkout-cone-mode: false
+
+      - name: 同步闸门
+        env:
+          GOX_CORE: ${{ github.workspace }}/.gox-core
+        run: |
+          if [ ! -d "$GOX_CORE/testdata/datav" ]; then
+            echo "::warning::取不到 Gox 主仓，跳过同步闸门"
+          else
+            python3 scripts/check-sync.py
+          fi
+
+      # ── 包装配 + 真跑一遍 ─────────────────────────────────────────────
+      # 构建主仓的 gox 二进制：冒烟要用真运行时。这一步也顺带证明主仓
+      # 那边能编过（如果同时改了主仓的 gfx 内核，这里会一起暴露）。
+      - name: 构建 Gox 运行时
+        id: gox
+        continue-on-error: true
+        run: |
+          git clone --depth 1 https://github.com/14752222/Gox .gox-build 2>/dev/null || exit 0
+          ( cd .gox-build && go build -o gox . ) && echo "ok=1" >> "$GITHUB_OUTPUT"
+
+      - name: 冒烟（装进临时工程，import 并渲染）
+        if: steps.gox.outputs.ok == '1'
+        env:
+          GOX: ${{ github.workspace }}/.gox-build/gox
+          GOX_CORE: ${{ github.workspace }}/.gox-core
+        run: xvfb-run -a ./scripts/smoke.sh

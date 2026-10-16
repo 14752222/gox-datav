@@ -1,0 +1,13 @@
+node_modules/
+__pycache__/
+*.py[cod]
+.DS_Store
+
+# 本地构建 / 发布中间物
+*.tgz
+
+# ⚠️ 站点截图（docs/shots/*.png）**必须入库**，不要加进来。
+# GitHub Pages 是从仓库直接托管的静态站，部署机上没有 Gox 运行时、
+# 也跑不了离屏渲染（gfx 依赖系统字体与 GUI 栈），截图没法在部署时现生成。
+# 它们是资产不是产物 —— 由 Gox 主仓的画廊流水线离线生成后提交进来，
+# 重新生成的步骤见 scripts/README.md。

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>gx-datav · Gox 数据大屏组件库</title>
+<meta name="description" content="gx-datav —— Gox 数据大屏组件库。29 个 canvas 自绘组件，零第三方依赖，纯 Go JS 运行时驱动。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="hero">
+  <nav class="topnav">
+    <span class="brand">gx<span class="dot">·</span>datav</span>
+    <div class="links">
+      <a href="#start">快速开始</a>
+      <a href="#components">组件</a>
+      <a href="#examples">大屏示例</a>
+      <a href="https://github.com/14752222/gox-datav" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </nav>
+
+  <div class="hero-body">
+    <h1>Gox 数据大屏组件库</h1>
+    <p class="lead">
+      <b>29 个</b> canvas 自绘组件，零第三方依赖。深空底、高饱和强调色、信号驱动的
+      响应式数据流 —— 全部由 <code>gx/gfx</code> 的 canvas 原语与 <code>gx/solid</code>
+      的信号拼出来。
+    </p>
+    <div class="install">
+      <code id="install-cmd">gox install gx-datav</code>
+      <button class="copy" data-copy="gox install gx-datav">复制</button>
+    </div>
+    <p class="hint">
+      运行需要 <a href="https://github.com/14752222/Gox" target="_blank" rel="noopener">Gox 运行时</a>
+      （<code>npm i -g @goxjs/goxjs</code>）—— 这不是 Node / 浏览器包。
+    </p>
+  </div>
+
+  <figure class="hero-shot">
+    <img src="shots/full/dashboard.png" alt="gx-datav 完整大屏示例" loading="lazy">
+    <figcaption>dashboard.js —— 1920×1080 完整大屏，数据每 2 秒模拟刷新</figcaption>
+  </figure>
+</header>
+
+<section class="notice">
+  <div class="notice-inner">
+    <h2>网页里看不到实时渲染 —— 这是设计上的取舍</h2>
+    <p>
+      gx-datav 的组件依赖 <code>gx/gfx</code> —— Gox 自带的<strong>软件光栅化 GUI</strong>，
+      它没有浏览器后端。Gox 的纯 VM 管线能编译成 WebAssembly（约 25.6&nbsp;MiB）并在
+      浏览器里跑 JS，但<strong>画不出来</strong>，所以图形版 Playground 已实测判定不可行。
+    </p>
+    <p>
+      本站的每一张图都是本地离屏渲染后截下来的（同一份确定性种子，可复现）。
+      要看组件真正动起来的样子，装好 Gox 后在本地跑
+      <code>./gox examples/dashboard.js</code>。
+    </p>
+  </div>
+</section>
+
+<main>
+  <section id="start" class="section">
+    <h2>快速开始</h2>
+    <div class="install">
+      <code>gox install gx-datav</code>
+      <button class="copy" data-copy="gox install gx-datav">复制</button>
+    </div>
+    <pre class="code"><code>import { h, render, createSignal } from "gox";
+import {
+  BorderBox, TitleBar, RingProgress, LineChart,
+  palette, seriesRandomWalk,
+} from "gx-datav";
+
+const [vals, setVals] = createSignal([78, 92, 64]);
+
+render(
+  &lt;window title="大屏" width={1280} height={720}&gt;
+    &lt;column width="100%" height="100%" background={palette.bg} padding={12} gap={10}&gt;
+      &lt;BorderBox type={1} width="100%" flexGrow={1}&gt;
+        &lt;TitleBar title="核心指标" align="left" fontSize={14}/&gt;
+        &lt;row flexGrow={1} justifyContent="space-around" alignItems="center"&gt;
+          &lt;RingProgress value={() =&gt; vals()[0]} size={110} label="订单" sub="完成率"/&gt;
+          &lt;RingProgress value={() =&gt; vals()[1]} size={110} color={palette.ok} label="履约" sub="及时率"/&gt;
+        &lt;/row&gt;
+      &lt;/BorderBox&gt;
+    &lt;/column&gt;
+  &lt;/window&gt;
+);
+
+// 数据变化即重绘：所有数据 prop 都接受 signal getter
+setInterval(() =&gt; setVals([rnd(60, 99), rnd(70, 99), rnd(40, 95)]), 2000);</code></pre>
+
+    <div class="cards">
+      <div class="card">
+        <h3>响应式数据流</h3>
+        <p>数据 prop 同时接受<strong>静态值</strong>与 <strong>signal getter</strong>。
+          getter 在每次 onDraw 时求值，读到的 signal 自动成为绘制依赖 —— 数据一变即重绘，不用手动调重画。</p>
+      </div>
+      <div class="card">
+        <h3>零依赖</h3>
+        <p>不引任何第三方库。色板、数学、文本度量、绘制工具全部自带，
+          共约 5000 行 JS。</p>
+      </div>
+      <div class="card">
+        <h3>主题契约</h3>
+        <p><code>theme.js</code> 导出的是主题契约 —— 换肤只改这一个文件，
+          全部 29 个组件跟着变。</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="components" class="section">
+    <h2>组件</h2>
+    <p class="section-lead">
+      点击任意组件查看<strong>截图、完整 props 说明</strong>。props 文档与源码注释同源，
+      由脚本自动生成，不会与实现脱节。
+    </p>
+    <div id="filters" class="filters"></div>
+    <div id="grid" class="grid"></div>
+  </section>
+
+  <section id="examples" class="section">
+    <h2>大屏示例</h2>
+    <p class="section-lead">三个完整示例，全部确定性种子 —— 同一 seed 每次运行同一组数据，截图可复现。</p>
+    <div class="examples">
+      <figure>
+        <img src="shots/full/dashboard.png" alt="完整大屏" loading="lazy">
+        <figcaption><code>examples/dashboard.js</code> 全部组件齐上场的 1920×1080 大屏</figcaption>
+      </figure>
+      <figure>
+        <img src="shots/full/more-charts.png" alt="图表组件" loading="lazy">
+        <figcaption><code>examples/more-charts.js</code> 水球 / 玫瑰 / 漏斗 / 子弹 / 散点 / 热力 / 组合 / 词云</figcaption>
+      </figure>
+      <figure>
+        <img src="shots/full/more-widgets.png" alt="信息组件" loading="lazy">
+        <figcaption><code>examples/more-widgets.js</code> KPI 卡 / 状态灯 / 倒计时 / 时间轴 / 飞线 / 进度条</figcaption>
+      </figure>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>
+    <a href="https://github.com/14752222/gox-datav" target="_blank" rel="noopener">gox-datav</a> ·
+    MIT License ·
+    <a href="https://github.com/14752222/Gox" target="_blank" rel="noopener">Gox</a> 项目
+  </p>
+  <p class="sub">
+    组件库的设计讨论与高难度功能清单在
+    <a href="https://github.com/14752222/Gox-hard-features" target="_blank" rel="noopener">Gox-hard-features</a>。
+  </p>
+</footer>
+
+<div id="modal" class="modal" hidden>
+  <div class="modal-inner">
+    <button class="modal-close" aria-label="关闭">×</button>
+    <div class="modal-body"></div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+</body>
+</html>

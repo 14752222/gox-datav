@@ -1,0 +1,1225 @@
+{
+  "groups": [
+    "布局与容器",
+    "数字与指标",
+    "仪表与进度",
+    "图表",
+    "信息组件"
+  ],
+  "components": [
+    {
+      "name": "BorderBox",
+      "short": "科技风面板边框 (6 型)",
+      "group": "布局与容器",
+      "desc": "科技风边框 数据大屏的\"大屏感\"一半来自边框: 直角硬边 + 四角标记 + 半透明深底, 让内容像\"嵌\"在一块显示屏里。本组件提供 6 种预置边框, 全部用 canvas 原语画在一个铺满面板的画布上 (边框装饰层), 内容走普通 flex 流: <BorderBox type={1} width={460} height={300} color=\"#22e6ff\"> <column ...>...</column> </BorderBox> 结构 (为什么是绝对定位三件套): rect 面板底 (半透明深色, 让边框与内容有区分) canvas 边框装饰 (绝对定位铺满, zIndex 压在最上, 不挡内容命中 —— 装饰层只在边缘几像素内落笔, 命中测试按绘制区域走) column 内容流 (padding 由 type 决定: 斜角边框要留更大边距) 内核没有 stack 容器, 绝对定位 + zIndex 就是层叠的正解 (见 GUI 指南 §5.2); canvas 不做事件命中之外的参与, 天然不干扰内容交互。 六种边框: 1 经典角标 四角 L 形亮线 + 面板 1px 边 (最通用) 2 双层边框 外细边 + 内亮边 + 四角短标 3 斜切角 八边形斜角 + 角线 (机甲风) 4 左光条 左侧渐变竖条 + 细边框 (轻量, 适合列表) 5 外框光晕 双层边 + 四角亮块 + 外扩辉光 (重氛围) 6 科技角 四角复合装饰 + 顶部标题槽 + 可选扫描线 颜色语义: color 是主强调色 (角标/描边), background 是面板底。",
+      "props": [
+        {
+          "name": "type",
+          "desc": "1（经典角标）· 2 双层边框 · 3 斜切角 · 4 左光条 · 5 外框光晕 · 6 科技角"
+        },
+        {
+          "name": "width / height",
+          "desc": "支持 \"100%\" 与数字"
+        },
+        {
+          "name": "color",
+          "desc": "主强调色（角标 / 描边），缺省 palette.accent"
+        },
+        {
+          "name": "background",
+          "desc": "面板底，缺省 palette.panel"
+        },
+        {
+          "name": "title",
+          "desc": "顶部标题槽（画在装饰层上，type 6 的搭档）"
+        },
+        {
+          "name": "scan",
+          "desc": "扫描线动画（type 6 氛围件），缺省 false"
+        },
+        {
+          "name": "padding",
+          "desc": "内容内边距，缺省按 type（type 3 斜角要留 24）"
+        },
+        {
+          "name": "border / radius",
+          "desc": "面板描边 / 圆角，缺省 true / 0"
+        }
+      ],
+      "propsSource": "readme",
+      "shot": "shots/datav-c-border.png"
+    },
+    {
+      "name": "TitleBar",
+      "short": "装饰标题",
+      "group": "布局与容器",
+      "desc": "大屏面板的标题不是\"一段文字\", 而是面板的眉: 要有标记 (竖条/菱形)、 要有翼线、主副标题分层。两种对齐: left 竖条 + 主标题 (+ 副标题) + 右侧延伸翼线 (列表型面板) center 左右翼线 + 菱形 + 主标题 (居中大面板) 高度自适应字号, 不给固定高度 —— 嵌在 BorderBox 里当第一行正好。 装饰全部画在一个铺满的 canvas 上, 文本走 canvas drawText (发光色 直接用强调色即可, 内核没有 shadowBlur, 不假装有)。",
+      "props": [
+        {
+          "name": "title / subtitle",
+          "desc": "主 / 副标题，缺省 \"\""
+        },
+        {
+          "name": "align",
+          "desc": "\"left\" 竖条 + 翼线；\"center\" 菱形 + 双翼线，缺省 left"
+        },
+        {
+          "name": "fontSize / subFontSize",
+          "desc": "字号，缺省 16 / 11"
+        },
+        {
+          "name": "color / textColor / subColor",
+          "desc": "装饰 / 主文本 / 副文本色，缺省主题三色"
+        },
+        {
+          "name": "deco",
+          "desc": "装饰件开关，缺省 true"
+        }
+      ],
+      "propsSource": "readme",
+      "shot": "shots/datav-c-title.png"
+    },
+    {
+      "name": "FlipBoard",
+      "short": "数字翻牌器",
+      "group": "数字与指标",
+      "desc": "翻牌器",
+      "props": [
+        {
+          "name": "value",
+          "desc": "数字 (或 signal getter)"
+        },
+        {
+          "name": "digits",
+          "desc": "位数 (缺省按 value 位数, 最少 2)"
+        },
+        {
+          "name": "size",
+          "desc": "单字宽 (缺省 34), 牌高 = size * 1.4"
+        },
+        {
+          "name": "gap",
+          "desc": "位间距 (缺省 6)"
+        },
+        {
+          "name": "color",
+          "desc": "数字色 (缺省主文本色)"
+        },
+        {
+          "name": "accent",
+          "desc": "翻定时的落位色 (缺省强调色)"
+        },
+        {
+          "name": "bg",
+          "desc": "牌底 (缺省半透明深蓝)"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-flip.png"
+    },
+    {
+      "name": "CountUp",
+      "short": "数字缓动",
+      "group": "数字与指标",
+      "desc": "数字动效",
+      "props": [
+        {
+          "name": "value",
+          "desc": "目标值 (数字或 signal getter)"
+        },
+        {
+          "name": "duration",
+          "desc": "缓动时长 ms (缺省 800)"
+        },
+        {
+          "name": "decimals",
+          "desc": "小数位 (缺省 0)"
+        },
+        {
+          "name": "prefix",
+          "desc": "前缀串 (如 \"¥\")"
+        },
+        {
+          "name": "suffix",
+          "desc": "后缀串 (如 \"%\" / \"万\")"
+        },
+        {
+          "name": "fontSize",
+          "desc": "字号 (缺省 26)"
+        },
+        {
+          "name": "color",
+          "desc": "颜色 (缺省主文本色)"
+        },
+        {
+          "name": "comma",
+          "desc": "千分位 (缺省 true)"
+        },
+        {
+          "name": "width",
+          "desc": "画布宽 (缺省按文本估算)"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-countup.png"
+    },
+    {
+      "name": "RingProgress",
+      "short": "环形进度",
+      "group": "仪表与进度",
+      "desc": "单环进度: 底部整圈轨道 + 从顶部 (-90°) 顺时针的进度弧 + 端点光晕 + 中心数值。值变化走 makeAnimValue 缓动, 途中每帧重绘。",
+      "props": [
+        {
+          "name": "value",
+          "desc": "0~100 (越界钳制)"
+        },
+        {
+          "name": "size",
+          "desc": "直径 (缺省 120)"
+        },
+        {
+          "name": "width",
+          "desc": "环厚 px (缺省 10)"
+        },
+        {
+          "name": "color",
+          "desc": "进度色 (缺省强调色)"
+        },
+        {
+          "name": "track",
+          "desc": "轨道色 (缺省暗蓝)"
+        },
+        {
+          "name": "label",
+          "desc": "顶部小标签 (缺省无; 数值恒显示, 不被 label 替换)"
+        },
+        {
+          "name": "sub",
+          "desc": "底部副标签 (缺省空)"
+        },
+        {
+          "name": "unit",
+          "desc": "主标签后缀 (缺省 \"%\")"
+        },
+        {
+          "name": "ticks",
+          "desc": "外圈刻度数 (0 = 不画)"
+        },
+        {
+          "name": "glow",
+          "desc": "端点光晕 (缺省 true)"
+        },
+        {
+          "name": "duration",
+          "desc": "缓动 ms (缺省 900)"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-ring.png"
+    },
+    {
+      "name": "Gauge",
+      "short": "仪表盘",
+      "group": "仪表与进度",
+      "desc": "半圆速度表: 135° 起、225° 扫过 (正下方留缺口给单位标签)。三段式 刻度带 (绿→黄→红) 模拟\"安全区/警戒区\", 指针 + 中心大数值, 值变化 时指针与数字一起缓动。",
+      "props": [
+        {
+          "name": "value",
+          "desc": "当前值"
+        },
+        {
+          "name": "min",
+          "desc": "(缺省 0)"
+        },
+        {
+          "name": "max",
+          "desc": "(缺省 100)"
+        },
+        {
+          "name": "unit",
+          "desc": "单位串 (缺省 \"\")"
+        },
+        {
+          "name": "label",
+          "desc": "表名 (画在底部缺口处)"
+        },
+        {
+          "name": "size",
+          "desc": "画布宽 (缺省 260), 高 = size * 0.62"
+        },
+        {
+          "name": "color",
+          "desc": "指针色 (缺省强调色)"
+        },
+        {
+          "name": "duration",
+          "desc": "缓动 ms (缺省 900)"
+        },
+        {
+          "name": "decimals",
+          "desc": "小数位 (缺省 0)"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-gauge.png"
+    },
+    {
+      "name": "LineChart",
+      "short": "折线图",
+      "group": "图表",
+      "desc": "多序列折线: 网格 + Y 刻度 + X 标签 + Catmull-Rom 平滑曲线 + 渐变 面积 + 数据点光晕 + 末值标签 + 图例。所有常见诉求一次给齐, 单项 关不掉的是\"重\" (网格), 其余都是 prop。",
+      "props": [
+        {
+          "name": "series",
+          "desc": "[{name, color?, data: [number]}] —— 多条线按索引取色板"
+        },
+        {
+          "name": "labels",
+          "desc": "X 轴刻度 (与 data 等长)"
+        },
+        {
+          "name": "height",
+          "desc": "画布高 (缺省 200), 宽由容器给 (\"100%\")"
+        },
+        {
+          "name": "smooth",
+          "desc": "平滑 (缺省 true); false = 原折线"
+        },
+        {
+          "name": "area",
+          "desc": "渐变面积 (缺省 true, 仅第一条线)"
+        },
+        {
+          "name": "yMax",
+          "desc": "Y 上限 (缺省自动: 数据最大值的 1.15 倍, 向上取整到刻度)"
+        },
+        {
+          "name": "yMin",
+          "desc": "Y 下限 (缺省 0)"
+        },
+        {
+          "name": "yGrid",
+          "desc": "Y 网格线数 (缺省 4)"
+        },
+        {
+          "name": "legend",
+          "desc": "图例 (缺省 true)"
+        },
+        {
+          "name": "valueFmt",
+          "desc": "末值标签格式化 (缺省 trimFloat 1 位)"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-line.png"
+    },
+    {
+      "name": "BarChart",
+      "short": "柱状图",
+      "group": "图表",
+      "desc": "垂直柱状 (横柱由调用方换数据即可, 不做第二套布局): 顶端圆角柱 + 顶部数值 + X 标签 + 基线。多序列时并列 (grouped), 单序列时按色板 逐柱取色 (大屏常见的\"彩虹柱\")。",
+      "props": [
+        {
+          "name": "series",
+          "desc": "[{name, color?, data: [number]}] 多序列并列; 单序列可简写 成 data 数字数组 (自动包 成一条, 逐柱取色板)"
+        },
+        {
+          "name": "labels",
+          "desc": "X 轴标签"
+        },
+        {
+          "name": "height",
+          "desc": "画布高 (缺省 200)"
+        },
+        {
+          "name": "barRatio",
+          "desc": "柱宽占槽宽比 (缺省 0.55)"
+        },
+        {
+          "name": "showValue",
+          "desc": "柱顶数值 (缺省 true)"
+        },
+        {
+          "name": "yMax",
+          "desc": "Y 上限 (缺省自动 niceCeil)"
+        },
+        {
+          "name": "yGrid",
+          "desc": "Y 网格数 (缺省 4)"
+        },
+        {
+          "name": "legend",
+          "desc": "图例 (多序列时默认开)"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-bar.png"
+    },
+    {
+      "name": "ComboChart",
+      "short": "柱线组合图 (双轴)",
+      "group": "图表",
+      "desc": "(双 Y 轴) 左轴柱 + 右轴线, 一套 x 标签两套量纲 (销量 × 转化率 的标配形态)。 柱走圆角柱, 线走 Catmull-Rom 平滑 + 末值光晕点, 两侧刻度各自 niceCeil。比 LineChart 只多一根右轴 —— 数据 prop 的形态与折线图 完全一致, 从 line.js 迁移零成本。",
+      "props": [
+        {
+          "name": "bars",
+          "desc": "[{name, color?, data: [number]}] 左轴 (柱)"
+        },
+        {
+          "name": "lines",
+          "desc": "[{name, color?, data: [number]}] 右轴 (线)"
+        },
+        {
+          "name": "labels",
+          "desc": "X 轴刻度 (与 data 等长)"
+        },
+        {
+          "name": "height",
+          "desc": "画布高 (缺省 240)"
+        },
+        {
+          "name": "smooth",
+          "desc": "线平滑 (缺省 true)"
+        },
+        {
+          "name": "barRatio",
+          "desc": "柱宽占槽宽比 (缺省 0.5)"
+        },
+        {
+          "name": "yGrid",
+          "desc": "Y 网格数 (缺省 4)"
+        },
+        {
+          "name": "width",
+          "desc": "画布宽 (缺省 \"100%\")"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-combo.png"
+    },
+    {
+      "name": "PieChart",
+      "short": "饼图 / 环图",
+      "group": "图表",
+      "desc": "/ 环形图 占比类图形一次做齐: 实心饼 (pie) 与环图 (donut) 同一套数据, 切换 只差一个 prop。扇区间隙 1.5° (贴边太死, 大屏上分不出瓣), 环图 中心放总计。悬停高亮 (onHover 回调 + 选中扇区外扩) 也带上 —— 大屏越来越多是触屏, 能点能悬停不是锦上添花。",
+      "props": [
+        {
+          "name": "data",
+          "desc": "[{name, value, color?}] color 缺省取色板"
+        },
+        {
+          "name": "donut",
+          "desc": "环图 (缺省 false); true 时 inner 为内径比 (0~1)"
+        },
+        {
+          "name": "inner",
+          "desc": "环图内径比 (缺省 0.62)"
+        },
+        {
+          "name": "size",
+          "desc": "画布边长 (缺省 200)"
+        },
+        {
+          "name": "center",
+          "desc": "环图中心文案 (缺省总计 + 单位); pie 模式忽略"
+        },
+        {
+          "name": "unit",
+          "desc": "中心文案单位"
+        },
+        {
+          "name": "labelFmt",
+          "desc": "扇区百分比标签格式化 (缺省 trim1)"
+        },
+        {
+          "name": "onHover",
+          "desc": "悬停扇区回调 ({name, value, index} | null)"
+        },
+        {
+          "name": "startAngle",
+          "desc": "起始角 (缺省 -90°, 12 点起)"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-pie.png"
+    },
+    {
+      "name": "RoseChart",
+      "short": "玫瑰图 (南丁格尔)",
+      "group": "图表",
+      "desc": "(南丁格尔) 扇区角度等分、半径按值 —— 与饼图正好互补: 饼图看\"占比\", 玫瑰图看 \"量大者突出\" (值差一倍, 面积差四倍, 视觉冲击强)。数据少 (3~8 项) 时最好看。",
+      "props": [
+        {
+          "name": "data",
+          "desc": "[{name, value, color?}]"
+        },
+        {
+          "name": "size",
+          "desc": "画布边长 (缺省 220)"
+        },
+        {
+          "name": "inner",
+          "desc": "中心孔径比 (缺省 0.25; 0 = 实心)"
+        },
+        {
+          "name": "gap",
+          "desc": "扇区间隙 deg (缺省 1.5)"
+        },
+        {
+          "name": "legend",
+          "desc": "图例 (缺省 true)"
+        },
+        {
+          "name": "valueFmt",
+          "desc": "图例数值格式化 (缺省 fmtInt)"
+        },
+        {
+          "name": "startAngle",
+          "desc": "起始角 (缺省 -90°, 12 点起)"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-rose.png"
+    },
+    {
+      "name": "RadarChart",
+      "short": "雷达图",
+      "group": "图表",
+      "desc": "多维能力对比: levels 层同心多边形网格 + 轴线 + 多序列数据多边形 (半透明填充 + 描边 + 顶点)。标签贴在轴末端外侧, 按所在象限自动 对齐 (右半区左对齐、左半区右对齐), 不会压到图上。",
+      "props": [
+        {
+          "name": "axes",
+          "desc": "轴名称数组 (3~8 条)"
+        },
+        {
+          "name": "series",
+          "desc": "[{name, color?, values: [number]}] 各轴取值 (0~max)"
+        },
+        {
+          "name": "size",
+          "desc": "画布边长 (缺省 220)"
+        },
+        {
+          "name": "max",
+          "desc": "轴最大值 (缺省 100)"
+        },
+        {
+          "name": "levels",
+          "desc": "网格层数 (缺省 4)"
+        },
+        {
+          "name": "legend",
+          "desc": "图例 (缺省 true)"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-radar.png"
+    },
+    {
+      "name": "ScatterChart",
+      "short": "气泡散点图",
+      "group": "图表",
+      "desc": "散点 + 气泡 (第三维映射到半径): 网格 + 双向刻度 + 多序列。用于 \"GMV × 复购率 × 用户数\"这类三维关系一屏看完的场景。",
+      "props": [
+        {
+          "name": "series",
+          "desc": "[{name, color?, data: [{x, y, r?}]}] r 缺省取中档"
+        },
+        {
+          "name": "xLabel",
+          "desc": "X 轴名 (缺省无)"
+        },
+        {
+          "name": "yLabel",
+          "desc": "Y 轴名 (缺省无)"
+        },
+        {
+          "name": "width",
+          "desc": "画布宽 (缺省 \"100%\")"
+        },
+        {
+          "name": "height",
+          "desc": "画布高 (缺省 240)"
+        },
+        {
+          "name": "sizeRange",
+          "desc": "[最小, 最大] 气泡直径 px (缺省 [6, 26])"
+        },
+        {
+          "name": "grid",
+          "desc": "Y 网格数 (缺省 4)"
+        },
+        {
+          "name": "legend",
+          "desc": "图例 (缺省 true)"
+        },
+        {
+          "name": "valueFmt",
+          "desc": "刻度格式化 (缺省整数)"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-scatter.png"
+    },
+    {
+      "name": "HeatMap",
+      "short": "热力图",
+      "group": "图表",
+      "desc": "网格色块: 值 → 颜色 (colorFrom 冷 → colorTo 热, 走 mix 线性插值)。 经典用法是 7 天 × 24 小时的访问热力, 但组件不限定维度 —— 给二维数组 就行, 行列标签都可选。",
+      "props": [
+        {
+          "name": "data",
+          "desc": "二维数组 number[][] (外层行 × 内层列; 缺省 [])"
+        },
+        {
+          "name": "xLabels",
+          "desc": "列标签 (可短于列数, 抽稀显示)"
+        },
+        {
+          "name": "yLabels",
+          "desc": "行标签 (可短于行数)"
+        },
+        {
+          "name": "width",
+          "desc": "画布宽 (缺省 \"100%\")"
+        },
+        {
+          "name": "cellH",
+          "desc": "格高 (缺省 18)"
+        },
+        {
+          "name": "cellGap",
+          "desc": "格间距 (缺省 2)"
+        },
+        {
+          "name": "colorFrom",
+          "desc": "低值色 (缺省深蓝)"
+        },
+        {
+          "name": "colorTo",
+          "desc": "高值色 (缺省强调色)"
+        },
+        {
+          "name": "labelW",
+          "desc": "行标签列宽 (缺省 44)"
+        },
+        {
+          "name": "showValue",
+          "desc": "格内数值 (缺省 false; 格够大才放得下) 取色走 draw.js 的 mix (hex 线性混合) —— 不引渐变色带, 两个端点 + 一个 t 就够热力图用; 要多色带 (绿→黄→红) 传 colorFrom/colorTo 即可, 或外层自行映射成预染色的 [r,g,b] ... 不, 保持简单: 两色插值。 mix 在 draw.js 不在 theme.js: 曾经从 theme.js 导入, 缺名导入不报错 只是静默 undefined, onDraw 画第一行标签时调用才抛 —— 整块热力图只剩 一行行标签 (2026-10-15 实测, 画廊目检才发现)。"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-heatmap.png"
+    },
+    {
+      "name": "FunnelChart",
+      "short": "漏斗图",
+      "group": "图表",
+      "desc": "转化分析标配: 上宽下窄的梯形层叠, 每层右侧标注数值与对上一层的 转化率。数据按传入顺序画 (惯例是从大到小), 不自动排序 —— 顺序也是 业务语义 (注册→激活→付费), 组件不替用户猜。",
+      "props": [
+        {
+          "name": "data",
+          "desc": "[{name, value, color?}] 从上到下"
+        },
+        {
+          "name": "width",
+          "desc": "画布宽 (缺省 340)"
+        },
+        {
+          "name": "rowH",
+          "desc": "每层高 (缺省 34; 数据变长时按画布高自适应缩放)"
+        },
+        {
+          "name": "gap",
+          "desc": "层间距 (缺省 6)"
+        },
+        {
+          "name": "showRate",
+          "desc": "层级间转化率 (缺省 true)"
+        },
+        {
+          "name": "valueFmt",
+          "desc": "数值格式化 (缺省 fmtInt)"
+        },
+        {
+          "name": "neck",
+          "desc": "末层底宽/顶宽比 (缺省 0.55; 1 = 收成尖底) 画法: 第 i 层梯形的上下边宽按 value_i / value_0 比例; 下边宽取下一层 的值 —— 相邻层共享一条边, 视觉上是一条连续的漏斗而不是叠起来的梯形。 文本一律画在漏斗右侧空白区 (层内宽度随数据变, 放不稳)。"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-funnel.png"
+    },
+    {
+      "name": "RankingList",
+      "short": "排行榜",
+      "group": "数字与指标",
+      "desc": "Top N 榜单: 名次徽章 (前三金银铜) + 名称 + 数值条 + 数值。条宽按 值/最大值 比例, 值变化时缓动追平 (每行一个 makeAnimValue)。 全 canvas 自画 —— 条要动画、要避让文本, flex 做不到\"条宽连续插值\" 之外的轻量 (其实 flex 的 transition 只认 width 等五个属性且要显式 声明, 这里一行一条动画, 用 canvas 更直白)。",
+      "props": [
+        {
+          "name": "rows",
+          "desc": "[{name, value}] (或 {label}, 兼容 key 名)"
+        },
+        {
+          "name": "max",
+          "desc": "条满格值 (缺省 rows 里的最大值)"
+        },
+        {
+          "name": "rowHeight",
+          "desc": "行高 (缺省 30)"
+        },
+        {
+          "name": "color",
+          "desc": "条色 (缺省强调色)"
+        },
+        {
+          "name": "showBar",
+          "desc": "数值条 (缺省 true)"
+        },
+        {
+          "name": "valueFmt",
+          "desc": "数值格式化 (缺省 fmtInt)"
+        },
+        {
+          "name": "nameFmt",
+          "desc": "名称列宽截断"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-ranking.png"
+    },
+    {
+      "name": "ProgressList",
+      "short": "进度条组",
+      "group": "数字与指标",
+      "desc": "一行一条的横向进度: 名称 + 轨道 + 缓动条 + 右端数值。与 RankingList 的分工: 排行榜强调\"排序与竞争\" (奖牌/名次), 本组件强调\"完成度\" (每行独立 max, 条满格即 100%)。",
+      "props": [
+        {
+          "name": "rows",
+          "desc": "[{name, value, max?, color?}] max 缺省 100"
+        },
+        {
+          "name": "width",
+          "desc": "画布宽 (缺省 \"100%\")"
+        },
+        {
+          "name": "rowHeight",
+          "desc": "行高 (缺省 30)"
+        },
+        {
+          "name": "barH",
+          "desc": "条高 (缺省 8)"
+        },
+        {
+          "name": "showValue",
+          "desc": "右端数值 (缺省 true)"
+        },
+        {
+          "name": "valueFmt",
+          "desc": "数值格式化 (缺省 \"78%\" 百分比样式)"
+        },
+        {
+          "name": "nameWidth",
+          "desc": "名称列宽 (缺省 90)"
+        },
+        {
+          "name": "animMs",
+          "desc": "缓动 ms (缺省 800)"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-progress.png"
+    },
+    {
+      "name": "BulletChart",
+      "short": "子弹图",
+      "group": "数字与指标",
+      "desc": "Stephen Few 的 bullet graph: 实际值条 + 目标线 + 背景区间带 (差/中/优 三档), 一屏塞进\"实际 vs 目标 vs 历史区间\"。比进度条多一层信息密度, 大屏 KPI 行的常用形态。",
+      "props": [
+        {
+          "name": "rows",
+          "desc": "[{name, value, target, max?, unit?}] target 目标值, max 满格值 (缺省 100)"
+        },
+        {
+          "name": "width",
+          "desc": "画布宽 (缺省 \"100%\")"
+        },
+        {
+          "name": "rowH",
+          "desc": "行高 (缺省 26)"
+        },
+        {
+          "name": "barH",
+          "desc": "条高 (缺省 10)"
+        },
+        {
+          "name": "nameW",
+          "desc": "名称列宽 (缺省 80)"
+        },
+        {
+          "name": "animMs",
+          "desc": "缓动 ms (缺省 800)"
+        },
+        {
+          "name": "bands",
+          "desc": "背景区间比例 (缺省 [0.5, 0.75, 1] → 三档)"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-bullet.png"
+    },
+    {
+      "name": "ScrollTable",
+      "short": "轮播表格",
+      "group": "信息组件",
+      "desc": "数据大屏的表格不是给人翻页的, 是\"自己动\"的: 行带从下往上连续 滚动, 到底循环。全 canvas 自画 —— flex + scrollTop 写入口也能做, 但循环回到顶部会有一次硬跳 (内容不重复), canvas 连续位移没有这 个断裂。 机制: 一个 phase 信号 (0~总行高) 由 requestAnimationFrame 推进, 每帧 setPhase → canvas 重绘; 画的时候 offset = phase % 行高, 内容 画两遍 (一遍在 offset 上方、一遍在 offset + 总高), 视觉上无缝。",
+      "props": [
+        {
+          "name": "columns",
+          "desc": "[{key, label, width?, align?}] width 是权重 (缺省均分), align: \"left\"|\"right\" (缺省 left; number 型默认 right)"
+        },
+        {
+          "name": "rows",
+          "desc": "[{[key]: 值}]"
+        },
+        {
+          "name": "width",
+          "desc": "画布宽 (缺省 100%)"
+        },
+        {
+          "name": "height",
+          "desc": "可视高 (缺省 200)"
+        },
+        {
+          "name": "rowHeight",
+          "desc": "行高 (缺省 30)"
+        },
+        {
+          "name": "header",
+          "desc": "表头 (缺省 true)"
+        },
+        {
+          "name": "speed",
+          "desc": "滚动速度 px/s (缺省 30)"
+        },
+        {
+          "name": "interval",
+          "desc": "每行停顿 ms (缺省 0, 连续滚)"
+        },
+        {
+          "name": "zebra",
+          "desc": "斑马纹 (缺省 true)"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-table.png"
+    },
+    {
+      "name": "ClockPanel",
+      "short": "时钟面板",
+      "group": "信息组件",
+      "desc": "大屏右上角的标配: HH:MM:SS (冒号每秒半亮) + 日期 + 星期。运行时 没有 Date, 时间全部走 Temporal.Now.zonedDateTimeISO() —— 这也是 本项目时钟类组件的唯一正解 (见 README 的内置对象清单)。",
+      "props": [
+        {
+          "name": "size",
+          "desc": "主字号 (缺省 30)"
+        },
+        {
+          "name": "color",
+          "desc": "主色 (缺省主文本色)"
+        },
+        {
+          "name": "accent",
+          "desc": "冒号/装饰色 (缺省强调色)"
+        },
+        {
+          "name": "showDate",
+          "desc": "日期行 (缺省 true)"
+        },
+        {
+          "name": "showWeek",
+          "desc": "星期 (缺省 true)"
+        },
+        {
+          "name": "width",
+          "desc": "画布宽 (缺省 190)"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-clock.png"
+    },
+    {
+      "name": "Countdown",
+      "short": "倒计时",
+      "group": "信息组件",
+      "desc": "活动/开班倒计时: 天 · 时 · 分 · 秒四格, 每秒推进。目标时间用 epoch 毫秒 (运行时不有 Date, 但 Temporal.Now.instant().epochMilliseconds 给的 就是它; 目标端用 Date.parse 在宿主页面算好再传进来即可)。 到点后停在 0 (不穿负数), 可选 onEnd 回调。",
+      "props": [
+        {
+          "name": "target",
+          "desc": "目标 epoch ms (数字或 signal getter)"
+        },
+        {
+          "name": "size",
+          "desc": "单字宽 (缺省 34); 格高 = size * 1.5"
+        },
+        {
+          "name": "gap",
+          "desc": "格间距 (缺省 8)"
+        },
+        {
+          "name": "showDays",
+          "desc": "天数格 (缺省 true; false 时只留 时/分/秒)"
+        },
+        {
+          "name": "color",
+          "desc": "数字色 (缺省主文本色)"
+        },
+        {
+          "name": "accent",
+          "desc": "\"秒\"格强调色 (缺省 warn 黄 —— 最后一位最抓眼)"
+        },
+        {
+          "name": "bg",
+          "desc": "格底 (缺省半透明深蓝)"
+        },
+        {
+          "name": "onEnd",
+          "desc": "到点回调 (一次)"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-countdown.png"
+    },
+    {
+      "name": "LiquidFill",
+      "short": "水球图",
+      "group": "仪表与进度",
+      "desc": "ECharts 那一颗会晃的水球: 圆球 + 双正弦波 + 中心百分比。百分比变化走 makeAnimValue 缓动, 波面永不停 (rAF 推进相位) —— \"数据是活的\"在大屏上 就是靠这种小动作。",
+      "props": [
+        {
+          "name": "value",
+          "desc": "0~100 (越界钳制)"
+        },
+        {
+          "name": "size",
+          "desc": "画布边长 (缺省 160)"
+        },
+        {
+          "name": "color",
+          "desc": "球体描边/主色 (缺省强调色)"
+        },
+        {
+          "name": "waveColor",
+          "desc": "波浪色 (缺省 ok 绿)"
+        },
+        {
+          "name": "label",
+          "desc": "底部小标签 (缺省无; 数值恒显示)"
+        },
+        {
+          "name": "unit",
+          "desc": "数值后缀 (缺省 \"%\")"
+        },
+        {
+          "name": "duration",
+          "desc": "值缓动 ms (缺省 900)"
+        },
+        {
+          "name": "wave",
+          "desc": "波幅占半径比 (缺省 0.08)"
+        },
+        {
+          "name": "ring",
+          "desc": "外圈描边 (缺省 true) 实现要点: 内核 ctx 没有 clip() —— 圆内裁剪不能靠路径相交, 改用 scanline 填充: 逐行扫过圆的竖径, 每行用勾股定理算圆内半宽, 波面在该行的 x 区间画一条 1px 横线。~size 行 fillRect, 成本可忽略, 且天然获得\"双波叠色\" (同一行先判后波再判前波)。"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-liquid.png"
+    },
+    {
+      "name": "StatusLight",
+      "short": "状态指示灯组",
+      "group": "信息组件",
+      "desc": "服务健康看板: 一行/一列状态灯 (呼吸光晕) + 名称 + 状态文案。适合 系统监控大屏的\"总览条\"—— 一眼扫过去, 红橙绿各自几颗。",
+      "props": [
+        {
+          "name": "items",
+          "desc": "[{name, status, detail?}] status: \"ok\" | \"warn\" | \"bad\" | \"off\""
+        },
+        {
+          "name": "layout",
+          "desc": "\"row\" | \"column\" (缺省 column)"
+        },
+        {
+          "name": "gap",
+          "desc": "项间距 (缺省 10)"
+        },
+        {
+          "name": "dot",
+          "desc": "灯直径 (缺省 9)"
+        },
+        {
+          "name": "showDetail",
+          "desc": "显示 detail 副文案 (缺省 true)"
+        },
+        {
+          "name": "breathe",
+          "desc": "呼吸动画 (缺省 true; 关掉则静态灯)"
+        },
+        {
+          "name": "width",
+          "desc": "画布宽 (column 布局时缺省 220; row 时由内容定)"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-status.png"
+    },
+    {
+      "name": "Sparkline",
+      "short": "迷你趋势线",
+      "group": "数字与指标",
+      "desc": "无轴无刻度的小折线: 只表达\"形状与方向\", 给 KPI 卡 / 表格单元格 / 侧边栏嵌用。画布默认贴内容尺寸, 调用方给 width/height 即可。",
+      "props": [
+        {
+          "name": "data",
+          "desc": "[number] 或 signal getter"
+        },
+        {
+          "name": "width",
+          "desc": "画布宽 (缺省 120)"
+        },
+        {
+          "name": "height",
+          "desc": "画布高 (缺省 36)"
+        },
+        {
+          "name": "color",
+          "desc": "线色 (缺省强调色)"
+        },
+        {
+          "name": "fill",
+          "desc": "线下渐变面积 (缺省 true, 2 层)"
+        },
+        {
+          "name": "dot",
+          "desc": "末点光晕 (缺省 true)"
+        },
+        {
+          "name": "smooth",
+          "desc": "平滑 (缺省 true)"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-sparkline.png"
+    },
+    {
+      "name": "KpiCard",
+      "short": "KPI 指标卡",
+      "group": "数字与指标",
+      "desc": "指标卡 一屏 KPI 的原子单位: 标题 + 大数字 (缓动) + 单位 + 环比 (涨跌箭 头 + 三档色) + 迷你趋势线。单卡自足, 也可以 <row> 一排铺开 —— 大屏顶栏下面那一溜基本都是它。",
+      "props": [
+        {
+          "name": "label",
+          "desc": "指标名"
+        },
+        {
+          "name": "value",
+          "desc": "数值"
+        },
+        {
+          "name": "unit",
+          "desc": "单位 (缺省 \"\")"
+        },
+        {
+          "name": "delta",
+          "desc": "环比变化 (数字; 正=涨, 负=跌, undefined=不显示)"
+        },
+        {
+          "name": "deltaText",
+          "desc": "环比文案 (缺省 \"较昨日\"; 传 \"\" 不显示前缀)"
+        },
+        {
+          "name": "trend",
+          "desc": "趋势数组 (给 Sparkline; 不给则不画线)"
+        },
+        {
+          "name": "decimals",
+          "desc": "小数位 (缺省 0)"
+        },
+        {
+          "name": "comma",
+          "desc": "千分位 (缺省 true)"
+        },
+        {
+          "name": "color",
+          "desc": "大数字色 (缺省主文本色)"
+        },
+        {
+          "name": "width",
+          "desc": "画布宽 (缺省 200)"
+        },
+        {
+          "name": "height",
+          "desc": "画布高 (缺省 92)"
+        },
+        {
+          "name": "animMs",
+          "desc": "缓动 ms (缺省 800)"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-kpicard.png"
+    },
+    {
+      "name": "MarqueeText",
+      "short": "滚动消息栏",
+      "group": "信息组件",
+      "desc": "大屏底部/顶部的\"跑马灯\": 一条文字水平无缝滚动 (内容画两遍, 与 ScrollTable 同款的无环缝思路)。适合告警播报、系统公告这类\"要让所有人 抬头就看见\"的信息。",
+      "props": [
+        {
+          "name": "text",
+          "desc": "字符串 (或 signal getter) —— 建议带前后缀分隔, 如 \"● 系统正常 \""
+        },
+        {
+          "name": "speed",
+          "desc": "滚动速度 px/s (缺省 60); 0 = 静止"
+        },
+        {
+          "name": "fontSize",
+          "desc": "字号 (缺省 14)"
+        },
+        {
+          "name": "color",
+          "desc": "文字色 (缺省主文本色)"
+        },
+        {
+          "name": "accent",
+          "desc": "前缀标记色 (缺省强调色)"
+        },
+        {
+          "name": "gap",
+          "desc": "两遍之间的间距 (缺省 80)"
+        },
+        {
+          "name": "bg",
+          "desc": "底色 (缺省透明; 给半透明面板色可压住底纹)"
+        },
+        {
+          "name": "height",
+          "desc": "画布高 (缺省按字号自适应) 坑位同 table.js: rAF 的 loop 与它引用的变量必须同在函数体一层 —— 内层块闭包引用外层函数体变量会踩 TDZ 误判。"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-marquee.png"
+    },
+    {
+      "name": "Timeline",
+      "short": "时间轴",
+      "group": "信息组件",
+      "desc": "垂直事件流: 主轴 + 节点 (状态着色) + 时间戳 + 标题/详情。适合告警 流水、发布记录、值班日志这类\"按时间看事\"的面板。",
+      "props": [
+        {
+          "name": "events",
+          "desc": "[{time, title, detail?, status?}] status: \"ok\"|\"warn\"|\"bad\"|\"info\" (缺省 info)"
+        },
+        {
+          "name": "width",
+          "desc": "画布宽 (缺省 320)"
+        },
+        {
+          "name": "rowH",
+          "desc": "每事件行高 (缺省 46; 带 detail 自动放宽到 58)"
+        },
+        {
+          "name": "timeW",
+          "desc": "时间列宽 (缺省 74)"
+        },
+        {
+          "name": "showLine",
+          "desc": "主轴 (缺省 true)"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-timeline.png"
+    },
+    {
+      "name": "FlightLines",
+      "short": "飞线图",
+      "group": "信息组件",
+      "desc": "地图向的\"数据在天上飞\": 若干 (起点 → 终点) 弧线, 光点沿弧匀速巡游, 端点呼吸圆。不绑定任何地图 —— 给一张底图自己摆坐标, 或纯装饰用。",
+      "props": [
+        {
+          "name": "lines",
+          "desc": "[{from: [x, y], to: [x, y], color?, value?}]"
+        },
+        {
+          "name": "width",
+          "desc": "画布宽 (缺省 400)"
+        },
+        {
+          "name": "height",
+          "desc": "画布高 (缺省 260)"
+        },
+        {
+          "name": "speed",
+          "desc": "光点速度 px/s (缺省 140)"
+        },
+        {
+          "name": "curvature",
+          "desc": "弧的弯度 (0~1, 缺省 0.35; 0 = 直线)"
+        },
+        {
+          "name": "trail",
+          "desc": "拖尾段数 (缺省 8)"
+        },
+        {
+          "name": "dots",
+          "desc": "端点圆 (缺省 true)"
+        },
+        {
+          "name": "labels",
+          "desc": "端点标签 [{x, y, text}] (缺省无)"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-flight.png"
+    },
+    {
+      "name": "WordCloud",
+      "short": "词云",
+      "group": "图表",
+      "desc": "螺旋布局的词云: 按词频映射字号, 从中心沿阿基米德螺线向外找第一个 不撞已放词的位置。内核 drawText 不受 rotate/translate 变换影响 (变换只作用于路径原语, 实测 canvas.go 的 origin() 不应用变换) —— 所以词一律水平摆放, 靠字号差与疏密出效果, 不假装能旋转。",
+      "props": [
+        {
+          "name": "words",
+          "desc": "[{text, weight}] weight 越大字越大 (缺省 1)"
+        },
+        {
+          "name": "width",
+          "desc": "画布宽 (缺省 360)"
+        },
+        {
+          "name": "height",
+          "desc": "画布高 (缺省 220)"
+        },
+        {
+          "name": "minSize",
+          "desc": "/ maxSize 字号范围 (缺省 12 / 34)"
+        },
+        {
+          "name": "color",
+          "desc": "文字色 (缺省主文本色; 高频词用强调色)"
+        },
+        {
+          "name": "accentTop",
+          "desc": "前 N 个高频词用强调色 (缺省 3)"
+        },
+        {
+          "name": "seed",
+          "desc": "布局种子 (同种子同布局, 截图可复现)"
+        }
+      ],
+      "propsSource": "src",
+      "shot": "shots/datav-c-wordcloud.png"
+    }
+  ]
+}

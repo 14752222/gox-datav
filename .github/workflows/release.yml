@@ -1,0 +1,169 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# gx-datav 发版流水线：纯 JS 包，无需编译 —— 同步闸门 → 打包 → 发到 npm
+#
+# 与主仓 Gox 的 release.yml 是**两条独立流水线**。那边发的是平台二进制
+# （@goxjs/goxjs，要交叉编译五个平台），这边发的只是 JS 源码，所以这里
+# 没有构建矩阵、没有签名公证、没有移动端子包 —— 别把两边的复杂度混到一起。
+#
+# 触发条件（三种入口，全部汇入同一个幂等作业）：
+#   * push 标签 v*      —— 版本号以标签为准，且必须与 package.json 一致
+#   * Release published —— 以 Release 的 tag 为准，同样要求两者一致
+#   * workflow_dispatch —— 手动触发，可勾 dry_run 只打包不上传
+#
+# 幂等：先查 registry，该版本已存在 → 跳过（exit 0 + notice）。重复推送、
+#   重跑历史工作流、补跑失败的发版都不会报红，也不会误发。
+#
+# 认证：npm Trusted Publishing (OIDC)，不需要任何 secret / token。
+#   npmjs.com → gx-datav 包 Settings → Trusted Publisher 四个字段必须逐字符相等：
+#     Organization or user = 14752222
+#     Repository           = gox-datav
+#     Workflow filename    = release.yml
+#     Environment name     = （留空，本工作流没有 environment:）
+#   失配的症状是**误导性的 404**，不是 403。
+#   另：本工作流里不得出现 NODE_AUTH_TOKEN / registry-url —— .npmrc 里的 token
+#   会压过 OIDC 自动检测，让 npm 继续走旧凭据，最终也是那个 404。
+#   ⚠️ 首次发布时包里**还没有** Trusted Publisher 配置项（包都不存在）——
+#   第一版得先手动 `npm publish` 一次（或用 granular token），包建起来之后
+#   再去 Settings 里配 OIDC。这一步过了，后续才全自动。
+#
+# 为什么发之前要跑同步闸门：组件源码在本仓 src/ 与 Gox 主仓 testdata/datav/
+#   各存一份（理由见 README「源码真源与同步」）。发布是"把本仓这份推给全世界"
+#   的动作，此刻如果两边已经漂移，等于把一份与主仓回归验证不同的代码发了出去。
+#   所以 publish 前硬性 check-sync；主仓的 testdata/datav/ 会以 artifact 方式
+#   取最新 main（拿不到就跳过闸门并 ::warning::，不因为一个仓库的访问问题
+#   卡死发版 —— 但会在日志里留痕）。
+# ─────────────────────────────────────────────────────────────────────────────
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "只打包与校验，不上传 npm"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write # 换取 npm 的 OIDC 发布凭据，必需
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "" # 显式留空：registry-url 会写死 _authToken，压过 OIDC
+
+      # ── 版本判定 ＋ registry 判重 ──────────────────────────────────────
+      - id: decide
+        name: 决定要发的版本
+        env:
+          PKG_NAME: gx-datav
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          PKG_VER="$(node -p "require('./package.json').version")"
+
+          case "${{ github.event_name }}" in
+            push)
+              VER="${GITHUB_REF_NAME#v}"
+              if [ "$VER" != "$PKG_VER" ]; then
+                echo "::error::标签 ${GITHUB_REF_NAME} 与 package.json 的 $PKG_VER 不一致"
+                exit 1
+              fi
+              ;;
+            release)
+              VER="${RELEASE_TAG#v}"
+              if [ "$VER" != "$PKG_VER" ]; then
+                echo "::error::Release tag $RELEASE_TAG 与 package.json 的 $PKG_VER 不一致"
+                exit 1
+              fi
+              ;;
+            *)
+              VER="$PKG_VER"
+              ;;
+          esac
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+
+          # 判重：查到该版本 = 已发布；查不到但包本身在 = 版本确实没发过；
+          # 两者都查不到 = 网络抖了，重试（别把网络故障误判成"没发过"而重复发布）
+          exists=no
+          for attempt in 1 2 3 4 5; do
+            if npm view "$PKG_NAME@$VER" version >/dev/null 2>&1; then
+              exists=yes; break
+            fi
+            if npm view "$PKG_NAME" version >/dev/null 2>&1; then
+              exists=no; break
+            fi
+            echo "registry 查询失败（第 $attempt 次），3s 后重试"
+            sleep 3
+          done
+
+          if [ "$exists" = yes ]; then
+            echo "::notice::$PKG_NAME@$VER 已在 registry 上，跳过发布"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::准备发布 $PKG_NAME@$VER"
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── 同步闸门（尽力而为）───────────────────────────────────────────
+      - name: 取 Gox 主仓的最新组件源码
+        id: core
+        if: steps.decide.outputs.publish == 'true'
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          repository: 14752222/Gox
+          path: .gox-core
+          sparse-checkout: testdata/datav
+          sparse-checkout-cone-mode: false
+
+      - name: 同步闸门：本仓 src/ 与主仓 testdata/datav/ 必须一致
+        if: steps.decide.outputs.publish == 'true'
+        env:
+          GOX_CORE: ${{ github.workspace }}/.gox-core
+        run: |
+          set -euo pipefail
+          if [ ! -d "$GOX_CORE/testdata/datav" ]; then
+            echo "::warning::取不到 Gox 主仓（私有/网络/权限），跳过同步闸门 —— 发布继续，但这份源码未经与主仓比对"
+          else
+            python3 scripts/check-sync.py
+          fi
+
+      # ── 打包与发布 ────────────────────────────────────────────────────
+      - name: 数据与包内容自检
+        if: steps.decide.outputs.publish == 'true'
+        run: |
+          set -euo pipefail
+          python3 scripts/gen-site-data.py >/dev/null
+          # 站点数据得能生成（顺带证明 29 个组件的注释都还在、解析没崩）
+          test -f docs/components.json
+          # 包内容预览：files 白名单之外的东西绝不能进来（截图、docs/ 都不该发）
+          npm pack --dry-run
+
+      - name: 发布 ${{ steps.decide.outputs.version }}
+        if: steps.decide.outputs.publish == 'true'
+        env:
+          # 注意 github.event.inputs 而非 inputs：后者只在 workflow_dispatch
+          # 下存在，push tag / release 事件里引用它会得到空串（不是错，但
+          # 用 github.event.inputs 语义更明确）。
+          DRY: ${{ github.event.inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          if [ "$DRY" = "true" ]; then
+            echo "::notice::dry_run 已勾选 —— 只打包，不上传"
+            npm pack
+            exit 0
+          fi
+          npm publish --access public --provenance
+          echo "::notice::已发布 gx-datav@${{ steps.decide.outputs.version }}"

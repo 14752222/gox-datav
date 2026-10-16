@@ -1,0 +1,7 @@
+# 包内容由 package.json 的 files 白名单控制（src / examples / README / LICENSE）。
+# 这份 .npmignore 是**双保险**：万一有人改成 files 之外的发包方式，也不至于把
+# 站点和截图塞进包里 —— docs/ 里有 29 张 PNG 加整站，占了本仓一半体积，
+# 但它们对 npm 用户毫无用处（看文档该去主页 / README）。
+docs/
+scripts/
+.github/
