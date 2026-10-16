@@ -68,8 +68,17 @@ jobs:
         id: gox
         continue-on-error: true
         run: |
-          git clone --depth 1 https://github.com/14752222/Gox .gox-build 2>/dev/null || exit 0
-          ( cd .gox-build && go build -o gox . ) && echo "ok=1" >> "$GITHUB_OUTPUT"
+          if ! git clone --depth 1 https://github.com/14752222/Gox .gox-build; then
+            echo "::error::克隆 Gox 主仓失败 —— 冒烟跳过"
+            exit 0
+          fi
+          # 入口是 cmd/gox：仓库根目录没有 .go 文件，go build . 会报 "no Go files"
+          # （写错路径的话这一步会静默失败、冒烟被跳过、CI 照样绿）
+          if ( cd .gox-build && go build -o gox ./cmd/gox ); then
+            echo "ok=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Gox 主仓构建失败 —— 冒烟跳过（详见日志）"
+          fi
 
       - name: 冒烟（装进临时工程，import 并渲染）
         if: steps.gox.outputs.ok == '1'
